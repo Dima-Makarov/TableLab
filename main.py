@@ -172,7 +172,7 @@ def update_tree(tree, table_name):
         update_tree(tree, table_name)
 
     for column_name in column_names:
-        tree.heading(column_name, text=column_name, command=lambda: change_sort_params(column_name))
+        tree.heading(column_name, text=column_name, command=lambda _col=column_name: change_sort_params(_col))
     for row in data:
         tree.insert("", tk.END, values=row)  # Exclude the 'id' column
 
@@ -193,12 +193,12 @@ def get_values_for_combobox_soc():
 
 def display_table_data(table_name):
     frame = ttk.Frame(tab_notebook)
-    
+
     tree = ttk.Treeview(frame, show="headings")
     column_names, _ = update_tree(tree, table_name)
     entry_widgets = []
     tree.pack(expand=True, fill=tk.BOTH)
-    
+
     add_button = ttk.Button(frame, text="Add", command=lambda: add_record(tree, table_name, entry_widgets))
     edit_button = ttk.Button(frame, text="Edit", command=lambda: edit_record(tree, table_name, entry_widgets))
     delete_button = ttk.Button(frame, text="Delete", command=lambda: delete_record(tree, table_name))
