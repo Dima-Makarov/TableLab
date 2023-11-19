@@ -8,11 +8,11 @@ import psycopg2
 from psycopg2 import sql
 
 connection = psycopg2.connect(
-    user="postgres",
+    user=input("input username to database (default is postgres):"),
     password=input("Input password to database:"),
     host="localhost",
     port="5432",
-    database="postgres"
+    database="makarov"
 )
 connection.autocommit = True
 
