@@ -1,3 +1,5 @@
+CREATE SCHEMA pg;
+
 CREATE TABLE pg.SoCs (
     id INT PRIMARY KEY,
     Model VARCHAR(255),
