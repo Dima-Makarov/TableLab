@@ -6,7 +6,6 @@ from tkinter import Label
 from tkcalendar import DateEntry
 import psycopg2
 from psycopg2 import sql
-
 connection = psycopg2.connect(
     user=input("input username to database (default is postgres):"),
     password=input("Input password to database:"),
@@ -42,12 +41,13 @@ def get_table_data(table_name):
     try:
         cursor = connection.cursor()
         if table_name == 'Phones':
-            query = sql.SQL(f"""SELECT Phones.id AS id, Phones.Model AS model, Phones.Date_out AS date_out, SoCs.Model AS used_soc, Phones.Camera_count AS camera_count, Phones.Mass AS mass
+            query = sql.SQL(f"""SELECT Phones.id AS id, Phones.Model AS model, TO_CHAR(Phones.Date_out, 'DD.MM.YYYY') AS date_out, SoCs.Model AS used_soc, Phones.Camera_count AS camera_count, Phones.Mass AS mass
                                 FROM pg.Phones Phones
                                 JOIN pg.SoCs ON Phones.Used_SoC = pg.SoCs.id
                                 ORDER BY {current_sort_col_phones} {"DESC" if reversed_sort_phones else "ASC"};""")
         else:
-            query = sql.SQL(f"""SELECT * FROM pg.{table_name}
+            query = sql.SQL(f"""SELECT SoCs.id AS id, SoCs.Model AS model, TO_CHAR(SoCs.Date_out, 'DD.MM.YYYY') AS date_out, SoCs.tdp AS TDP, SoCs.core_count AS Core_count
+             FROM pg.{table_name} SoCs
             ORDER BY {current_sort_col_socs} {"DESC" if reversed_sort_socs else "ASC"};""")
         cursor.execute(query)
 
@@ -124,7 +124,7 @@ def edit_record(tree, table_name, entry_widgets):
         messagebox.showinfo("Info", "Record updated successfully.")
 
     except (Exception, psycopg2.Error) as error:
-        messagebox.showerror("Error", f"Error deleting record from database, {error}")
+        messagebox.showerror("Error", f"Error editing record, {error}")
 
 
 def delete_record(tree, table_name):
@@ -191,6 +191,19 @@ def get_values_for_combobox_soc():
     return [i.str() for i in soc_options]
 
 
+def on_treeview_click(event, tree, entry_widgets):
+    try:
+        item = tree.selection()[0]
+        values = tree.item(item, 'values')
+        for i in range(len(entry_widgets)):
+            if isinstance(entry_widgets[i], ttk.Combobox):
+                entry_widgets[i].set(values[i+1])
+            else:
+                entry_widgets[i].delete(0, tk.END)  # Clear the current value
+                entry_widgets[i].insert(0, values[i+1])
+    except Exception:
+        pass
+
 def display_table_data(table_name):
     frame = ttk.Frame(tab_notebook)
 
@@ -198,6 +211,7 @@ def display_table_data(table_name):
     column_names, _ = update_tree(tree, table_name)
     entry_widgets = []
     tree.pack(expand=True, fill=tk.BOTH)
+    tree.bind('<ButtonRelease-1>', lambda event: on_treeview_click(event, tree, entry_widgets))
 
     add_button = ttk.Button(frame, text="Add", command=lambda: add_record(tree, table_name, entry_widgets))
     edit_button = ttk.Button(frame, text="Edit", command=lambda: edit_record(tree, table_name, entry_widgets))
@@ -238,7 +252,10 @@ def display_table_data(table_name):
 window = tk.Tk()
 window.title("Table Viewer")
 
-name = ttk.Label(window, text="Макаров Дмитрий Вадимович, 4 курс, 4 группа, 2023")
+name = ttk.Label(window, text="""Макаров Дмитрий Вадимович, 4 курс, 4 группа, 2023\n
+Чтобы изменить запись, нажмите на интересующую строку, внизу измените что-нибудь, и нажмите Edit.\n
+Чтобы отсортировать, нажмите на заголовки столбцов""")
+
 tab_notebook = ttk.Notebook(window)
 
 display_table_data("SoCs")
