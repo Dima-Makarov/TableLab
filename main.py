@@ -41,12 +41,12 @@ def get_table_data(table_name):
     try:
         cursor = connection.cursor()
         if table_name == 'Phones':
-            query = sql.SQL(f"""SELECT Phones.id AS id, Phones.Model AS model, TO_CHAR(Phones.Date_out, 'DD.MM.YYYY') AS date_out, SoCs.Model AS used_soc, Phones.Camera_count AS camera_count, Phones.Mass AS mass
+            query = sql.SQL(f"""SELECT Phones.id AS id, Phones.Model AS model, Phones.Date_out AS date_out, SoCs.Model AS used_soc, Phones.Camera_count AS camera_count, Phones.Mass AS mass
                                 FROM pg.Phones Phones
                                 JOIN pg.SoCs ON Phones.Used_SoC = pg.SoCs.id
                                 ORDER BY {current_sort_col_phones} {"DESC" if reversed_sort_phones else "ASC"};""")
         else:
-            query = sql.SQL(f"""SELECT SoCs.id AS id, SoCs.Model AS model, TO_CHAR(SoCs.Date_out, 'DD.MM.YYYY') AS date_out, SoCs.tdp AS TDP, SoCs.core_count AS Core_count
+            query = sql.SQL(f"""SELECT SoCs.id AS id, SoCs.Model AS model, SoCs.Date_out AS date_out, SoCs.tdp AS TDP, SoCs.core_count AS Core_count
              FROM pg.{table_name} SoCs
             ORDER BY {current_sort_col_socs} {"DESC" if reversed_sort_socs else "ASC"};""")
         cursor.execute(query)
@@ -80,7 +80,8 @@ def add_record(tree, table_name, entry_widgets):
         values = []
         for wid in entry_widgets:
             if isinstance(wid, ttk.Combobox):
-                opt = soc_options[wid['values'].index(wid.get())]
+                soc_names = [i.str() for i in soc_options]
+                opt = soc_options[soc_names.index(wid.get())]
                 values.append(opt.get_id())
             else:
                 values.append(wid.get())
@@ -151,6 +152,12 @@ def delete_record(tree, table_name):
     except (Exception, psycopg2.Error) as error:
         messagebox.showerror("Error", f"Error deleting record from database, {error}")
 
+from datetime import datetime
+
+def convert_date_format(value):
+    formatted_date = value.strftime("%d.%m.%Y")
+    return formatted_date
+
 
 def update_tree(tree, table_name):
     for i in tree.get_children():
@@ -170,11 +177,13 @@ def update_tree(tree, table_name):
             global reversed_sort_socs
             reversed_sort_socs = not reversed_sort_socs
         update_tree(tree, table_name)
-
+    date_out_column_index = column_names.index('date_out')
     for column_name in column_names:
         tree.heading(column_name, text=column_name, command=lambda _col=column_name: change_sort_params(_col))
     for row in data:
-        tree.insert("", tk.END, values=row)  # Exclude the 'id' column
+        lst = list(row)
+        lst[date_out_column_index] = convert_date_format(lst[date_out_column_index])
+        tree.insert("", tk.END, values=tuple(lst))  # Exclude the 'id' column
 
     displaycolumns = []
     for col in tree["columns"]:
@@ -236,6 +245,7 @@ def display_table_data(table_name):
             SoC_combobox_widget = ttk.Combobox(frame, values=[], state="readonly",
                                                postcommand=lambda: SoC_combobox_widget.configure(
                                                    values=get_values_for_combobox_soc()))
+            SoC_combobox_widget.configure(values=get_values_for_combobox_soc())
             entry_widget = SoC_combobox_widget
         elif col_name in ("camera_count", "core_count"):
             entry_widget = Spinbox(frame, name=col_name, from_=0, to=10000)
@@ -260,7 +270,7 @@ tab_notebook = ttk.Notebook(window)
 
 display_table_data("SoCs")
 display_table_data("Phones")
-
+get_values_for_combobox_soc()
 name.pack(expand=True, fill=tk.BOTH)
 tab_notebook.pack(expand=True, fill=tk.BOTH)
 
